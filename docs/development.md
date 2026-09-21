@@ -63,6 +63,29 @@ docker compose exec node npm run dev
 docker compose exec node npm run build
 ```
 
+## File Upload Limits
+
+Filament XLSX imports are limited by the Docker Nginx and PHP upload settings:
+
+- Nginx `client_max_body_size`: `50M`
+- PHP `upload_max_filesize`: `50M`
+- PHP `post_max_size`: `60M`
+- PHP `memory_limit`: `256M`
+- PHP execution/input timeouts: `300` seconds
+
+When changing `docker/php/uploads.ini` or `docker/nginx/default.conf`, rebuild and restart the affected services:
+
+```sh
+docker compose build app
+docker compose up -d app web
+```
+
+Verify the PHP settings inside the `app` container:
+
+```sh
+docker compose exec app php -i | grep -E 'upload_max_filesize|post_max_size|memory_limit|max_execution_time|max_input_time'
+```
+
 ## Verification Checklist
 
 Before completing backend work, run the narrowest relevant checks:

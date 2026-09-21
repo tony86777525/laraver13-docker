@@ -49,3 +49,11 @@ Use clear domain names:
 ## Validation and Authorization
 
 Validate external input before calling services. Check authorization at the HTTP or Filament action boundary, then let services enforce domain invariants that must hold regardless of entrypoint.
+
+## Filament Resource Permissions
+
+Use Filament Shield generated resource permissions as the single source of truth for Filament resource access, for example `ViewAny:Part`, `View:Part`, `Create:Part`, `Update:Part`, and `Delete:Part`.
+
+Do not add parallel business permission names for the same Filament resource, such as `warehouse.viewer` or `warehouse.manager`, unless a documented mapping layer is introduced and tested. Mixing Shield resource permissions with separate domain permissions makes the role editor appear correct while policies still return 403.
+
+Filament navigation groups must not have the exact same label as a resource model label in that group. Use a distinct group label such as `Warehouse Admin` when a `Warehouse` resource also exists.
