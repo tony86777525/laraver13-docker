@@ -8,6 +8,7 @@ use App\Filament\Resources\Parts\Pages\ListParts;
 use App\Models\Part;
 use App\Models\Supplier;
 use App\Models\Warehouse;
+use App\Models\WarehouseLocation;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
@@ -16,6 +17,8 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -55,7 +58,16 @@ class PartResource extends Resource
                     Select::make('primary_warehouse_id')
                         ->relationship('primaryWarehouse', 'code')
                         ->searchable()
-                        ->preload(),
+                        ->preload()
+                        ->live()
+                        ->afterStateUpdated(fn (Set $set): mixed => $set('primary_location_id', null)),
+                    Select::make('primary_location_id')
+                        ->label('Primary Location')
+                        ->options(fn (Get $get): array => self::locationOptions($get('primary_warehouse_id')))
+                        ->searchable()
+                        ->preload()
+                        ->disabled(fn (Get $get): bool => blank($get('primary_warehouse_id')))
+                        ->exists(WarehouseLocation::class, 'id'),
                     Select::make('primary_supplier_id')
                         ->relationship('primarySupplier', 'code')
                         ->searchable()
@@ -107,6 +119,7 @@ class PartResource extends Resource
                 TextColumn::make('accounting_category')->label('Accounting')->searchable()->toggleable(),
                 TextColumn::make('primarySupplier.code')->label('Supplier')->searchable(),
                 TextColumn::make('primaryWarehouse.code')->label('Warehouse')->searchable(),
+                TextColumn::make('primaryLocation.code')->label('Location')->searchable()->toggleable(),
                 IconColumn::make('is_stock_calculated')->label('Stock')->boolean(),
                 IconColumn::make('is_disabled')->label('Disabled')->boolean(),
                 TextColumn::make('recent_purchase_price')->label('Recent Price')->numeric()->toggleable(),
@@ -118,6 +131,7 @@ class PartResource extends Resource
                 SelectFilter::make('accounting_category')->options(fn (): array => Part::query()->whereNotNull('accounting_category')->distinct()->orderBy('accounting_category')->pluck('accounting_category', 'accounting_category')->all()),
                 SelectFilter::make('primary_supplier_id')->label('Supplier')->options(fn (): array => Supplier::query()->orderBy('code')->pluck('code', 'id')->all()),
                 SelectFilter::make('primary_warehouse_id')->label('Warehouse')->options(fn (): array => Warehouse::query()->orderBy('code')->pluck('code', 'id')->all()),
+                SelectFilter::make('primary_location_id')->label('Location')->options(fn (): array => self::locationOptions()),
                 TernaryFilter::make('is_disabled')->label('Disabled'),
                 TernaryFilter::make('is_stock_calculated')->label('Stock calculated'),
             ])
@@ -135,5 +149,24 @@ class PartResource extends Resource
             'create' => CreatePart::route('/create'),
             'edit' => EditPart::route('/{record}/edit'),
         ];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private static function locationOptions(mixed $warehouseId = null): array
+    {
+        return WarehouseLocation::query()
+            ->with('warehouse')
+            ->when(
+                filled($warehouseId),
+                fn ($query): mixed => $query->where('warehouse_id', $warehouseId),
+            )
+            ->orderBy('code')
+            ->get()
+            ->mapWithKeys(fn (WarehouseLocation $location): array => [
+                $location->id => trim(($location->warehouse?->code ? "{$location->warehouse->code} / " : '').$location->code),
+            ])
+            ->all();
     }
 }

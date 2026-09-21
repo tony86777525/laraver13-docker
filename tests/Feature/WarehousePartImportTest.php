@@ -2,11 +2,18 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Resources\ImportBatches\ImportBatchResource;
 use App\Filament\Resources\Parts\PartResource;
+use App\Filament\Resources\Suppliers\SupplierResource;
+use App\Filament\Resources\Warehouses\WarehouseResource;
 use App\Models\ImportBatch;
 use App\Models\ImportBatchRow;
 use App\Models\Part;
+use App\Models\Supplier;
 use App\Models\User;
+use App\Models\Warehouse;
+use App\Models\WarehouseLocation;
+use App\Repositories\PartRepository;
 use App\Services\PartImportService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Gate;
@@ -92,6 +99,53 @@ class WarehousePartImportTest extends TestCase
         ]);
     }
 
+    public function test_duplicate_part_numbers_in_one_file_import_to_unique_part_count(): void
+    {
+        $path = $this->writeWorkbook([
+            $this->validRow(['品號' => 'P-001', '品名' => 'Original Name']),
+            $this->validRow(['品號' => 'P-002', '品名' => 'Second Part']),
+            $this->validRow(['品號' => 'P-001', '品名' => 'Updated Name']),
+        ]);
+
+        $batch = app(PartImportService::class)->import($path, 'duplicates.xlsx');
+
+        $this->assertSame(ImportBatch::STATUS_COMPLETED, $batch->status);
+        $this->assertSame(3, $batch->successful_rows);
+        $this->assertDatabaseCount('parts', 2);
+        $this->assertDatabaseHas('parts', [
+            'part_number' => 'P-001',
+            'name' => 'Updated Name',
+        ]);
+    }
+
+    public function test_part_master_search_can_filter_by_location(): void
+    {
+        $path = $this->writeWorkbook([
+            $this->validRow([
+                '品號' => 'P-001',
+                '品名' => 'Washer',
+                '主要倉庫' => 'WHPT',
+                '儲位' => 'A-01',
+            ]),
+            $this->validRow([
+                '品號' => 'P-002',
+                '品名' => 'Nut',
+                '主要倉庫' => 'WHPT',
+                '儲位' => 'B-02',
+            ]),
+        ]);
+
+        app(PartImportService::class)->import($path, 'locations.xlsx');
+
+        $location = WarehouseLocation::query()->where('code', 'A-01')->firstOrFail();
+        $parts = app(PartRepository::class)
+            ->queryForMasterSearch(['location_id' => $location->id])
+            ->pluck('part_number')
+            ->all();
+
+        $this->assertSame(['P-001'], $parts);
+    }
+
     public function test_invalid_header_marks_batch_failed(): void
     {
         $path = $this->writeWorkbook([
@@ -156,6 +210,87 @@ class WarehousePartImportTest extends TestCase
         $this->assertTrue(Gate::allows('viewAny', Part::class));
         $this->assertTrue(Gate::allows('create', Part::class));
         $this->assertTrue(PartResource::canCreate());
+    }
+
+    public function test_warehouse_supplier_and_import_batch_permissions_use_resource_permissions(): void
+    {
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        foreach ([
+            'ViewAny:Warehouse',
+            'Create:Warehouse',
+            'Update:Warehouse',
+            'Delete:Warehouse',
+            'ViewAny:Supplier',
+            'Create:Supplier',
+            'Update:Supplier',
+            'Delete:Supplier',
+            'ViewAny:ImportBatch',
+            'View:ImportBatch',
+        ] as $permission) {
+            Permission::query()->create(['name' => $permission, 'guard_name' => 'web']);
+        }
+
+        $viewer = User::factory()->create();
+        $viewer->givePermissionTo(['ViewAny:Warehouse', 'ViewAny:Supplier', 'ViewAny:ImportBatch']);
+
+        $manager = User::factory()->create();
+        $manager->givePermissionTo([
+            'ViewAny:Warehouse',
+            'Create:Warehouse',
+            'Update:Warehouse',
+            'Delete:Warehouse',
+            'ViewAny:Supplier',
+            'Create:Supplier',
+            'Update:Supplier',
+            'Delete:Supplier',
+            'ViewAny:ImportBatch',
+            'View:ImportBatch',
+        ]);
+
+        $warehouse = Warehouse::query()->create(['code' => 'WHPT', 'name' => '物料倉']);
+        $supplier = Supplier::query()->create(['code' => 'TW007', 'short_name' => '朝昶']);
+        $batch = ImportBatch::query()->create([
+            'import_type' => ImportBatch::TYPE_WAREHOUSE_PARTS,
+            'status' => ImportBatch::STATUS_COMPLETED,
+        ]);
+
+        $this->actingAs($viewer);
+
+        $this->assertTrue(Gate::allows('viewAny', Warehouse::class));
+        $this->assertFalse(Gate::allows('create', Warehouse::class));
+        $this->assertFalse(Gate::allows('update', $warehouse));
+        $this->assertFalse(Gate::allows('delete', $warehouse));
+        $this->assertFalse(WarehouseResource::canCreate());
+
+        $this->assertTrue(Gate::allows('viewAny', Supplier::class));
+        $this->assertFalse(Gate::allows('create', Supplier::class));
+        $this->assertFalse(Gate::allows('update', $supplier));
+        $this->assertFalse(Gate::allows('delete', $supplier));
+        $this->assertFalse(SupplierResource::canCreate());
+
+        $this->assertTrue(Gate::allows('viewAny', ImportBatch::class));
+        $this->assertFalse(Gate::allows('view', $batch));
+        $this->assertFalse(Gate::allows('create', ImportBatch::class));
+
+        $this->actingAs($manager);
+
+        $this->assertTrue(Gate::allows('viewAny', Warehouse::class));
+        $this->assertTrue(Gate::allows('create', Warehouse::class));
+        $this->assertTrue(Gate::allows('update', $warehouse));
+        $this->assertTrue(Gate::allows('delete', $warehouse));
+        $this->assertTrue(WarehouseResource::canCreate());
+
+        $this->assertTrue(Gate::allows('viewAny', Supplier::class));
+        $this->assertTrue(Gate::allows('create', Supplier::class));
+        $this->assertTrue(Gate::allows('update', $supplier));
+        $this->assertTrue(Gate::allows('delete', $supplier));
+        $this->assertTrue(SupplierResource::canCreate());
+
+        $this->assertTrue(Gate::allows('viewAny', ImportBatch::class));
+        $this->assertTrue(Gate::allows('view', $batch));
+        $this->assertFalse(Gate::allows('create', ImportBatch::class));
+        $this->assertFalse(ImportBatchResource::canCreate());
     }
 
     public function test_super_admin_role_bypasses_warehouse_resource_policies(): void

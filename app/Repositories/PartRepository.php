@@ -30,6 +30,7 @@ class PartRepository
             ->when($filters['accounting_category'] ?? null, fn (Builder $query, string $value): Builder => $query->where('accounting_category', $value))
             ->when($filters['supplier_id'] ?? null, fn (Builder $query, int $id): Builder => $query->where('primary_supplier_id', $id))
             ->when($filters['warehouse_id'] ?? null, fn (Builder $query, int $id): Builder => $query->where('primary_warehouse_id', $id))
+            ->when($filters['location_id'] ?? null, fn (Builder $query, int $id): Builder => $query->where('primary_location_id', $id))
             ->when(array_key_exists('is_disabled', $filters), fn (Builder $query): Builder => $query->where('is_disabled', (bool) $filters['is_disabled']))
             ->when(array_key_exists('is_stock_calculated', $filters), fn (Builder $query): Builder => $query->where('is_stock_calculated', (bool) $filters['is_stock_calculated']));
     }

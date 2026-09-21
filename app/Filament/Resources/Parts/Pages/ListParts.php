@@ -2,7 +2,9 @@
 
 namespace App\Filament\Resources\Parts\Pages;
 
+use App\Filament\Resources\ImportBatches\ImportBatchResource;
 use App\Filament\Resources\Parts\PartResource;
+use App\Models\ImportBatch;
 use App\Services\PartImportService;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
@@ -43,12 +45,33 @@ class ListParts extends ListRecords
                         $file instanceof TemporaryUploadedFile ? null : (string) $file,
                     );
 
-                    Notification::make()
-                        ->title('Import finished')
+                    $notification = Notification::make()
+                        ->title($this->importNotificationTitle($batch))
                         ->body("Status: {$batch->status}; success: {$batch->successful_rows}; failed: {$batch->failed_rows}.")
-                        ->success()
-                        ->send();
+                        ->actions([
+                            Action::make('viewImportBatch')
+                                ->label('View batch')
+                                ->url(ImportBatchResource::getUrl('view', ['record' => $batch])),
+                        ]);
+
+                    match ($batch->status) {
+                        ImportBatch::STATUS_COMPLETED => $notification->success(),
+                        ImportBatch::STATUS_COMPLETED_WITH_ERRORS => $notification->warning(),
+                        default => $notification->danger(),
+                    };
+
+                    $notification->send();
                 }),
         ];
+    }
+
+    private function importNotificationTitle(ImportBatch $batch): string
+    {
+        return match ($batch->status) {
+            ImportBatch::STATUS_COMPLETED => 'Import completed',
+            ImportBatch::STATUS_COMPLETED_WITH_ERRORS => 'Import completed with errors',
+            ImportBatch::STATUS_FAILED => 'Import failed',
+            default => 'Import finished',
+        };
     }
 }
