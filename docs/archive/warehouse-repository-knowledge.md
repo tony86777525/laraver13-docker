@@ -1,6 +1,8 @@
-# ERP 倉儲系統 Repository Knowledge
+# Warehouse Repository Knowledge
 
 ## 1. 文件目的
+
+本文件是倉儲功能的歷史分析參考。正式開發規格以 `docs/specs/warehouse.md` 為準。
 
 本文件整理倉儲系統的作業流程、資料模型與 Repository 分層設計，供後續 Laravel 13 + PHP 8.5 開發 migration、Model、Repository、Service、Filament 管理介面與測試時使用。
 
