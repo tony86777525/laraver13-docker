@@ -20,7 +20,6 @@ use Illuminate\Support\Facades\Gate;
 use OpenSpout\Common\Entity\Row;
 use OpenSpout\Writer\XLSX\Writer;
 use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
@@ -291,22 +290,6 @@ class WarehousePartImportTest extends TestCase
         $this->assertTrue(Gate::allows('view', $batch));
         $this->assertFalse(Gate::allows('create', ImportBatch::class));
         $this->assertFalse(ImportBatchResource::canCreate());
-    }
-
-    public function test_super_admin_role_bypasses_warehouse_resource_policies(): void
-    {
-        app(PermissionRegistrar::class)->forgetCachedPermissions();
-
-        $superAdmin = User::factory()->create();
-
-        Role::query()->create(['name' => 'super_admin', 'guard_name' => 'web']);
-        $superAdmin->assignRole('super_admin');
-
-        $this->actingAs($superAdmin);
-
-        $this->assertTrue(Gate::allows('viewAny', Part::class));
-        $this->assertTrue(Gate::allows('create', Part::class));
-        $this->assertTrue(PartResource::canCreate());
     }
 
     /**

@@ -128,7 +128,7 @@ Warehouse resources use Filament Shield resource permissions as the authoritativ
 - `ViewAny:InventoryTransaction` and `View:InventoryTransaction` control transaction history lookup.
 - `ViewAny:InboundDocument`, `View:InboundDocument`, `Create:InboundDocument`, and `Update:InboundDocument` control inbound documents.
 - `ViewAny:OutboundDocument`, `View:OutboundDocument`, `Create:OutboundDocument`, and `Update:OutboundDocument` control outbound documents.
-- `super_admin` is the privileged admin role and bypasses resource policies.
+- Every role, including `super_admin` and `admin`, must be granted each required resource permission explicitly. Role names do not bypass resource policies.
 
 ## Acceptance Criteria
 

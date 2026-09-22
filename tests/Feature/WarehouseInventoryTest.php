@@ -18,6 +18,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
@@ -215,6 +216,51 @@ class WarehouseInventoryTest extends TestCase
         $this->assertTrue(Gate::allows('view', $transaction));
         $this->assertFalse(Gate::allows('create', InventoryTransaction::class));
         $this->assertFalse(InventoryTransactionResource::canCreate());
+    }
+
+    public function test_privileged_role_names_do_not_bypass_inventory_permissions(): void
+    {
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        foreach ([
+            'ViewAny:Inventory',
+            'Create:Inventory',
+            'Update:Inventory',
+        ] as $permission) {
+            Permission::query()->create(['name' => $permission, 'guard_name' => 'web']);
+        }
+
+        [$part, $warehouse] = $this->createInventoryMasterData();
+        $inventory = Inventory::query()->create([
+            'part_id' => $part->id,
+            'warehouse_id' => $warehouse->id,
+            'location_key' => Inventory::locationKey(null),
+            'quantity' => 0,
+        ]);
+
+        foreach (['super_admin', 'admin'] as $roleName) {
+            $role = Role::query()->create(['name' => $roleName, 'guard_name' => 'web']);
+            $user = User::factory()->create();
+            $user->assignRole($role);
+
+            $this->actingAs($user);
+
+            $this->assertFalse(Gate::allows('viewAny', Inventory::class));
+            $this->assertFalse(Gate::allows('create', Inventory::class));
+            $this->assertFalse(Gate::allows('update', $inventory));
+            $this->assertFalse(InventoryResource::canCreate());
+
+            $role->givePermissionTo([
+                'ViewAny:Inventory',
+                'Create:Inventory',
+                'Update:Inventory',
+            ]);
+
+            $this->assertTrue(Gate::allows('viewAny', Inventory::class));
+            $this->assertTrue(Gate::allows('create', Inventory::class));
+            $this->assertTrue(Gate::allows('update', $inventory));
+            $this->assertTrue(InventoryResource::canCreate());
+        }
     }
 
     /**
