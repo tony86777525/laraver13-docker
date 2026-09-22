@@ -1,3 +1,14 @@
+# Laravel Warehouse Demo
+
+This Laravel 13 and Filament 5 project includes ERP part-master import, inventory snapshots, transaction history, manual adjustments, and document-based batch inbound and outbound operations.
+
+Start with:
+
+- [Development guide](docs/development.md)
+- [Warehouse specification](docs/specs/warehouse.md)
+
+PHP, Composer, Artisan, and tests must run in the Docker `app` container. See the development guide before working on the project.
+
 <p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
 
 <p align="center">

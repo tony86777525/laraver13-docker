@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Part extends Model
 {
@@ -80,6 +81,21 @@ class Part extends Model
     public function primaryLocation(): BelongsTo
     {
         return $this->belongsTo(WarehouseLocation::class, 'primary_location_id');
+    }
+
+    public function inventories(): HasMany
+    {
+        return $this->hasMany(Inventory::class);
+    }
+
+    public function inventoryTransactions(): HasMany
+    {
+        return $this->hasMany(InventoryTransaction::class);
+    }
+
+    public function inventoryDocumentItems(): HasMany
+    {
+        return $this->hasMany(InventoryDocumentItem::class);
     }
 
     public function scopeSearch(Builder $query, ?string $term): Builder

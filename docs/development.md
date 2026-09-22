@@ -97,3 +97,24 @@ Before completing backend work, run the narrowest relevant checks:
 - Frontend assets touched: `docker compose exec node npm run build`
 
 If Docker is unavailable, report the exact failure and do not substitute host PHP.
+
+## Warehouse Development
+
+The Warehouse business specification is `docs/specs/warehouse.md`.
+
+Apply Warehouse migrations and synchronize inbound/outbound permissions:
+
+```sh
+docker compose exec app php artisan migrate
+docker compose exec app php artisan shield:generate --resource=InboundDocumentResource,OutboundDocumentResource --option=permissions --panel=admin --no-interaction
+```
+
+Run Warehouse-focused verification:
+
+```sh
+docker compose exec app php artisan test --filter=WarehouseInventoryDocumentTest
+docker compose exec app php artisan test --filter=WarehouseInventoryTest
+docker compose exec app php artisan test --filter=WarehousePartImportTest
+```
+
+Negative inventory is controlled by `WAREHOUSE_ALLOW_NEGATIVE_INVENTORY`. It defaults to `false`; do not change the default without an explicit business decision.

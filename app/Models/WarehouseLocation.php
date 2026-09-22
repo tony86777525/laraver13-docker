@@ -25,4 +25,19 @@ class WarehouseLocation extends Model
     {
         return $this->hasMany(Part::class, 'primary_location_id');
     }
+
+    public function inventories(): HasMany
+    {
+        return $this->hasMany(Inventory::class);
+    }
+
+    public function inventoryTransactions(): HasMany
+    {
+        return $this->hasMany(InventoryTransaction::class);
+    }
+
+    public function inventoryDocumentItems(): HasMany
+    {
+        return $this->hasMany(InventoryDocumentItem::class);
+    }
 }

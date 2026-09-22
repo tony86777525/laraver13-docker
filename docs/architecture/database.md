@@ -27,6 +27,18 @@ Warehouse inventory uses two complementary records:
 
 Any operation that changes stock must happen in a database transaction and must produce an `inventory_transactions` record.
 
+## Inventory Documents
+
+Routine inbound and outbound operations use one shared document model:
+
+- `inventory_documents`: direction, globally unique document number, business date, warehouse, current revision, operator, and posting timestamps.
+- `inventory_document_items`: the current multi-line part, optional location, and positive quantity state.
+- `inventory_document_revisions`: immutable JSON snapshots of the document after posting and each edit.
+
+New documents post immediately. Editing compares old and new inventory contributions, locks all affected snapshots in stable key order, appends net-difference transactions, and updates current snapshots atomically. Documents are not deleted.
+
+`inventory_transactions` references the source inventory document and revision while retaining its own part, warehouse, location, quantity, document number, operator, and occurred-time snapshot.
+
 ## Import Model
 
 Excel imports should keep batch and row-level traceability:

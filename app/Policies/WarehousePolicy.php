@@ -29,6 +29,6 @@ class WarehousePolicy
 
     public function delete(User $user, Warehouse $warehouse): bool
     {
-        return $user->can('Delete:Warehouse');
+        return $user->can('Delete:Warehouse') && ! $warehouse->inventoryDocuments()->exists();
     }
 }

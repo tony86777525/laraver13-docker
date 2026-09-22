@@ -29,11 +29,11 @@ class PartPolicy
 
     public function delete(User $user, Part $part): bool
     {
-        return $user->can('Delete:Part');
+        return $user->can('Delete:Part') && ! $part->inventoryDocumentItems()->exists();
     }
 
     public function deleteAny(User $user): bool
     {
-        return $user->can('DeleteAny:Part');
+        return false;
     }
 }

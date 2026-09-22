@@ -42,8 +42,8 @@ Services own workflow consistency:
 
 Use clear domain names:
 
-- Repositories: `PartRepository`, `InventoryRepository`, `StockRequestRepository`.
-- Services: `PartImportService`, `StockFulfillmentService`, `InventoryQueryService`.
+- Repositories: `PartRepository`, `InventoryRepository`, `InventoryDocumentRepository`.
+- Services: `PartImportService`, `InventoryDocumentService`, `InventoryAdjustmentService`.
 - Tests: feature tests for workflows, unit tests for isolated service rules.
 
 ## Validation and Authorization

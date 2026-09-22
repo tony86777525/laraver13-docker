@@ -19,4 +19,19 @@ class Warehouse extends Model
     {
         return $this->hasMany(WarehouseLocation::class);
     }
+
+    public function inventories(): HasMany
+    {
+        return $this->hasMany(Inventory::class);
+    }
+
+    public function inventoryTransactions(): HasMany
+    {
+        return $this->hasMany(InventoryTransaction::class);
+    }
+
+    public function inventoryDocuments(): HasMany
+    {
+        return $this->hasMany(InventoryDocument::class);
+    }
 }
